@@ -41,7 +41,7 @@ def on_message(client, userdata, msg):
             # Gather thermometers
     	    if "TEMP" in device_sn: # If the device is a thermometer
                 device_type = "Thermometer"
-        	    thermometers.append(device_sn) # save it's SN
+                thermometers.append(device_sn) # save it's SN
                 sql = "INSERT INTO devices(`sn`, `type`, `online`) VALUES ('%s','%s',%d)" % (device_sn, device_type, 1)
                 try:
                     cursor.execute(sql) # Execute the SQL command
