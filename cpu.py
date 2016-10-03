@@ -10,7 +10,8 @@ thermometers = list()
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    if debug:
+        print("Connected with result code "+str(rc))
     # Subscribe
     client.subscribe("clients/+/state")
     # mqtt_client.subscribe("clients/+/info/#")
@@ -42,7 +43,7 @@ def on_message(client, userdata, msg):
     	    if "TEMP" in device_sn: # If the device is a thermometer
                 device_type = "Thermometer"
                 thermometers.append(device_sn) # save it's SN
-                sql = "INSERT INTO devices(`sn`, `type`, `online`) VALUES ('%s','%s',%d)" % (device_sn, device_type, 1)
+                sql = "INSERT INTO devices(`sn`, `type`, `state`) VALUES ('%s','%s',%d) WHERE NOT EXISTS (SELECT `sn` FROM devices WHERE `sn` = '%s')" % (device_sn, device_type, 1, device_sn)
                 try:
                     cursor.execute(sql) # Execute the SQL command
                     db.commit() # Commit your changes in the database
@@ -54,8 +55,9 @@ def on_message(client, userdata, msg):
                 # Device has disconnected
         elif "state" == topic_split[2] and "0" == str(msg.payload): # if the device has disconnected:
             if debug:
-                print("Delete device! "+device_sn)
-            sql = "DELETE FROM devices WHERE sn = '%s'" % (device_sn)
+                print("Offline device! "+device_sn)
+            # When the device disconnects - set 0 as state in devices table and clear IP address
+            sql = "UPDATE `devices` SET `state` = %d, `ip` = 'N/A' WHERE `sn` = '%s'" % (0, device_sn)
             try:
                 cursor.execute(sql) # Execute the SQL command
                 db.commit() # Commit your changes in the database
