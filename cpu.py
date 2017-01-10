@@ -14,7 +14,7 @@ def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
     # Subscribe
     client.subscribe("+/state")
-    mqtt_client.subscribe("+/info/#")
+    client.subscribe("+/info/#")
     # publish that CPU is ready
     client.publish("cpu/state", "1", 2, True)
 
@@ -39,8 +39,10 @@ def on_message(client, userdata, msg):
 	    # if "TEMP" in device_sn: # If the device is a thermometer
         #     device_type = "Thermometer"
         #     thermometers.append(device_sn) # save it's SN
-        sql = "INSERT INTO devices(`sn`, `online`) VALUES ('%s', %d) WHERE NOT EXISTS (SELECT `sn` FROM `devices` WHERE `sn` = '%s')" % (device_sn, 1, device_sn)
-        try:
+        #sql = "INSERT INTO devices(`sn`, `state`) VALUES ('%s', %d) WHERE NOT EXISTS (SELECT `sn` FROM `devices` WHERE `sn` = '%s')" % (device_sn, 1, device_sn)
+	sql = "INSERT INTO `devices`(`sn`, `state`) VALUES ('%s', %d) ON DUPLICATE KEY UPDATE `sn` = '%s'" % (device_sn, 1, device_sn)
+	#print(sql)
+	try:
             cursor.execute(sql) # Execute the SQL command
             db.commit() # Commit your changes in the database
         except MySQLdb.Error, e:
@@ -54,7 +56,8 @@ def on_message(client, userdata, msg):
             print("Offline device! "+device_sn)
         # When the device disconnects - set 0 as state in devices table and clear IP address
         sql = "UPDATE `devices` SET `state` = %d, `ip` = 'N/A' WHERE `sn` = '%s'" % (0, device_sn)
-        try:
+        #print(sql)
+	try:
             cursor.execute(sql) # Execute the SQL command
             db.commit() # Commit your changes in the database
         except MySQLdb.Error, e:
@@ -65,8 +68,9 @@ def on_message(client, userdata, msg):
 
     elif "info" == topic_split[1]:
         if "ip" == topic_split[2]:
-            sql = "UPDATE `devices` SET `ip` = %s WHERE `sn` = '%s'" % (str(msg.payload), device_sn)
-            try:
+            sql = "UPDATE `devices` SET `ip` = '%s' WHERE `sn` = '%s'" % (str(msg.payload), device_sn)
+            #print(sql)
+	    try:
                 cursor.execute(sql) # Execute the SQL command
                 db.commit() # Commit your changes in the database
             except MySQLdb.Error, e:
@@ -75,8 +79,9 @@ def on_message(client, userdata, msg):
                 except IndexError:
                     print "MySQL Error: %s" % str(e)
         if "type" == topic_split[2]:
-            sql = "UPDATE `devices` SET `type` = %s WHERE `sn` = '%s'" % (str(msg.payload), device_sn)
-            try:
+            sql = "UPDATE `devices` SET `type` = '%s' WHERE `sn` = '%s'" % (str(msg.payload), device_sn)
+            #print(sql)
+	    try:
                 cursor.execute(sql) # Execute the SQL command
                 db.commit() # Commit your changes in the database
             except MySQLdb.Error, e:
